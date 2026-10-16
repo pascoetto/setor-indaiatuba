@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Setor Indaiatuba</title>
+  <meta name="theme-color" content="#004a99">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Setor Indaiatuba">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <style>
+    html, body { margin: 0; height: 100%; background: #004a99; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #f4f6fa; }
+    #abertura { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #fff; background: #004a99; transition: opacity .3s; z-index: 2; }
+    #abertura img { width: 96px; height: 96px; }
+    #abertura.sumir { opacity: 0; pointer-events: none; }
+    .giro { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: g 1s linear infinite; }
+    @keyframes g { to { transform: rotate(360deg); } }
+    #faixa { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 3; background: #fff; color: #1f2937; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); padding: 14px; display: none; gap: 12px; align-items: center; max-width: 520px; margin: 0 auto; }
+    #faixa.mostrar { display: flex; }
+    #faixa img { width: 44px; height: 44px; border-radius: 10px; }
+    #faixa .txt { flex: 1; font-size: 14px; line-height: 1.35; }
+    #faixa .txt b { display: block; }
+    #faixa button { border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+    #btnInstalar { background: #004a99; color: #fff; }
+    #btnFechar { background: transparent; color: #6b7280; padding: 9px 6px !important; }
+  </style>
+</head>
+<body>
+  <div id="abertura"><img src="icon-192.png" alt=""><div class="giro"></div></div>
+  <iframe id="app" title="Setor Indaiatuba" allow="clipboard-write"></iframe>
+
+  <div id="faixa">
+    <img src="icon-192.png" alt="">
+    <div class="txt" id="faixaTexto"><b>Instale o app</b>Acesse o Setor Indaiatuba direto da tela inicial.</div>
+    <button id="btnInstalar">Instalar</button>
+    <button id="btnFechar" aria-label="Fechar">✕</button>
+  </div>
+
+  <script>
+    /* ====== CONFIGURAÇÃO: cole aqui o link do App da Web (termina com /exec) ====== */
+    var URL_SISTEMA = 'https://script.google.com/macros/s/AKfycbzkLLdAr8MgzFkn0-rIeN8eS8RnzuVDoEfxSEC1SjcVwh5jKOYDNjigvNVi3fVS9CAChg/exec';
+
+    var app = document.getElementById('app');
+    app.src = URL_SISTEMA;
+    app.addEventListener('load', function () {
+      setTimeout(function () { document.getElementById('abertura').classList.add('sumir'); }, 300);
+    });
+
+    /* Service worker: necessário para o "Instalar" aparecer no Android/computador */
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+
+    /* Faixa de instalação */
+    var faixa = document.getElementById('faixa');
+    var pedido = null;
+    var instalado = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    function dispensado() { try { return localStorage.getItem('faixaFechada') === '1'; } catch (e) { return false; } }
+    function fechar() { faixa.classList.remove('mostrar'); try { localStorage.setItem('faixaFechada', '1'); } catch (e) {} }
+    document.getElementById('btnFechar').onclick = fechar;
+
+    /* Android e computador (Chrome/Edge): botão Instalar de verdade */
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      pedido = e;
+      if (!instalado && !dispensado()) faixa.classList.add('mostrar');
+    });
+    document.getElementById('btnInstalar').onclick = function () {
+      if (!pedido) return fechar();
+      pedido.prompt();
+      pedido.userChoice.finally(function () { pedido = null; faixa.classList.remove('mostrar'); });
+    };
+    window.addEventListener('appinstalled', function () { faixa.classList.remove('mostrar'); });
+
+    /* iPhone/iPad (Safari): não existe botão, então mostra a instrução */
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios && !instalado && !dispensado()) {
+      document.getElementById('faixaTexto').innerHTML = '<b>Instale o app</b>Toque em <b style="display:inline">Compartilhar</b> (quadrado com seta) e depois em <b style="display:inline">Adicionar à Tela de Início</b>.';
+      document.getElementById('btnInstalar').textContent = 'Entendi';
+      setTimeout(function () { faixa.classList.add('mostrar'); }, 2500);
+    }
+  </script>
+</body>
+</html>
